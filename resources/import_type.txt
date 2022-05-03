@@ -1,0 +1,9 @@
+IMPORT_CODE
+0
+Executable code.
+IMPORT_DATA
+1
+Data.
+IMPORT_CONST
+2
+Specified as CONST in the .def file.

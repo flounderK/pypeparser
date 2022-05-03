@@ -1,0 +1,12 @@
+IMAGE_SYM_DTYPE_NULL
+0
+No derived type; the symbol is a simple scalar variable.
+IMAGE_SYM_DTYPE_POINTER
+1
+The symbol is a pointer to base type.
+IMAGE_SYM_DTYPE_FUNCTION
+2
+The symbol is a function that returns a base type.
+IMAGE_SYM_DTYPE_ARRAY
+3
+The symbol is an array of base type.
