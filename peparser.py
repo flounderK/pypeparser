@@ -204,7 +204,7 @@ class NiceHexFieldRepr:
         return "\n".join(ret)
 
 
-def create_structures_for_bitness(petype=PEHdrType.PE32,
+def create_pe_structures(petype=PEHdrType.PE32,
                                   endian=PEEndian.LITTLE_ENDIAN,
                                   additional_bases=None):
     """
@@ -236,6 +236,7 @@ def create_structures_for_bitness(petype=PEHdrType.PE32,
     if additional_bases is not None:
         base_types = base_types + additional_bases
 
+    # TODO: signature doesn't appear in object files
     fields = list({
         'signature': c_uint32,
         'machine': c_uint16,
@@ -289,8 +290,8 @@ def create_structures_for_bitness(petype=PEHdrType.PE32,
         'number_of_rva_and_sizes': c_uint32,
     }.items())
     structs['WindowsCOFFData'] = type('WindowsCOFFData',
-                                        base_types,
-                                        {'_fields_': fields})
+                                      base_types,
+                                      {'_fields_': fields})
 
     fields = list({
         'virtual_address': c_uint32,
@@ -340,6 +341,226 @@ def create_structures_for_bitness(petype=PEHdrType.PE32,
                                    base_types,
                                    {'_fields_': fields})
 
+    fields = list({
+        'name': c_ubyte*8,
+        'value': c_uint32,
+        'section_number': c_uint16,
+        'type': c_uint16,
+        'storage_class': c_uint8,
+        'number_of_aux_symbols': c_uint8,
+    }.items())
+    structs['SymbolTable'] = type('SymbolTable',
+                                  base_types,
+                                  {'_fields_': fields})
+
+    fields = list({
+        'short_name': c_ubyte*8,
+        'zeroes': c_uint32,
+        'offset': c_uint32,
+    }.items())
+    structs['SymbolNameRepr'] = type('SymbolNameRepr',
+                                     base_types,
+                                     {'_fields_': fields})
+
+    fields = list({
+        'tag_index': c_uint32,
+        'total_size': c_uint32,
+        'ptr_to_line_no': c_uint32,
+        'ptr_to_next_func': c_uint32,
+        '_unused': c_uint16,
+    }.items())
+    structs['Aux1'] = type('Aux1',
+                           base_types,
+                           {'_fields_': fields})
+    structs['FunctionDefinition'] = structs['Aux1']
+
+    fields = list({
+        '_unused1': c_uint32,
+        'line_no': c_uint16,
+        '_unused2': c_ubyte*6,
+        'ptr_to_next_func': c_uint32,
+        '_unused3': c_uint16,
+    }.items())
+    structs['Aux2'] = type('Aux2',
+                           base_types,
+                           {'_fields_': fields})
+    structs['bf_ef_Symbols'] = structs['Aux2']
+
+    fields = list({
+        'tag_index': c_uint32,
+        'characteristics': c_uint32,
+        '_unused': c_ubyte*10,
+    }.items())
+    structs['Aux3'] = type('Aux3',
+                           base_types,
+                           {'_fields_': fields})
+    structs['WeakExternal'] = structs['Aux3']
+
+    fields = list({
+        'file_name': c_ubyte*18,
+    }.items())
+    structs['Aux4'] = type('Aux4',
+                           base_types,
+                           {'_fields_': fields})
+
+    structs['Files'] = structs['Aux4']
+
+    fields = list({
+        'length': c_uint32,
+        'number_of_relocations': c_uint16,
+        'number_of_line_numbers': c_uint16,
+        'checksum': c_uint32,
+        'number': c_uint16,
+        'section': c_uint8,
+        '_unused': c_ubyte*3,
+    }.items())
+    structs['Aux5'] = type('Aux5',
+                           base_types,
+                           {'_fields_': fields})
+
+    structs['SectionDefinition'] = structs['Aux5']
+
+    fields = list({
+        'attributes': c_uint32,
+        'name': c_uint32,
+        'module_handle': c_uint32,
+        'delay_import_address_table': c_uint32,
+        'delay_import_name_table': c_uint32,
+        'bound_delay_import_table': c_uint32,
+        'unload_delay_import_table': c_uint32,
+        'time_stamp': c_uint32,
+    }.items())
+    structs['DelayLoadDirectoryTable'] = type('DelayLoadDirectoryTable',
+                                              base_types,
+                                              {'_fields_': fields})
+
+    # TODO: processor dependent
+    fields = list({
+        'begin_address': c_uint32,
+        'end_address': c_uint32,
+        'unwind_info': c_uint32,
+    }.items())
+    structs['FunctionTableEntry'] = type('FunctionTableEntry',
+                                         base_types,
+                                         {'_fields_': fields})
+
+    fields = list({
+        'page_rva': c_uint32,
+        'block_size': c_uint32,
+    }.items())
+    structs['BaseRelocationBlock'] = type('BaseRelocationBlock',
+                                          base_types,
+                                          {'_fields_': fields})
+
+    fields = list({
+        'type': c_uint16,
+        'offset': c_uint16,
+    }.items())
+
+    structs['BaseRelocationBlockEntry'] = type('BaseRelocationBlockEntry',
+                                               base_types,
+                                               {'_fields_': fields,
+                                                '__packed__': True})
+
+    fields = list({
+        'characteristics': c_uint32,
+        'time_data_stamp': c_uint32,
+        'major_version': c_uint16,
+        'minor_version': c_uint16,
+        'number_of_name_entries': c_uint16,
+        'number_of_id_entries': c_uint16,
+    }.items())
+    structs['ResourceDirectoryTable'] = type('ResourceDirectoryTable',
+                                             base_types,
+                                             {'_fields_': fields})
+
+    fields = list({
+        'name_offset': c_uint32,
+        'integer_id': c_uint32,
+        'data_entry_offset': c_uint32,
+        'subdirectory_offset': c_uint32,
+    }.items())
+    structs['ResourceDirectoryEntry'] = type('ResourceDirectoryEntry',
+                                             base_types,
+                                             {'_fields_': fields})
+
+    # TODO: might be a cleaner way
+    fields = list({
+        'length': c_uint16,
+        'unicode_string': c_ubyte*4,
+    }.items())
+    structs['ResourceDirectoryString'] = type('ResourceDirectoryString',
+                                              base_types,
+                                              {'_fields_': fields})
+
+    fields = list({
+        'data_rva': c_uint32,
+        'size': c_uint32,
+        'codepage': c_uint32,
+        '_reserved': c_uint32,
+    }.items())
+    structs['ResourceDataEntry'] = type('ResourceDataEntry',
+                                        base_types,
+                                        {'_fields_': fields})
+
+    fields = list({
+        'sig1': c_uint16,
+        'sig2': c_uint16,
+        'version': c_uint16,
+        'machine': c_uint16,
+        'timestamp': c_uint32,
+        'size_of_data': c_uint32,
+        'ordinal_or_hint': c_uint16,
+    }.items())
+
+    # bitfields
+    fields.append(('type', c_uint16, 2))
+    fields.append(('name_type', c_uint16, 3))
+    fields.append(('_reserved', c_uint16, 11))
+    structs['ImportHeader'] = type('ImportHeader',
+                                   base_types,
+                                   {'_fields_': fields,
+                                    '__packed__': True})
+
+    fields = list({
+        'export_flags': c_uint32,
+        'timestamp': c_uint32,
+        'major_version': c_uint16,
+        'minor_version': c_uint16,
+        'name_rva': c_uint32,
+        'ordinal_base': c_uint32,
+        'address_table_entries': c_uint32,
+        'number_of_name_ptrs': c_uint32,
+        'export_address_table_rva': c_uint32,
+        'name_ptr_rva': c_uint32,
+        'ordinal_table_rva': c_uint32,
+    }.items())
+    structs['ExportDirectoryTable'] = type('ExportDirectoryTable',
+                                           base_types,
+                                           {'_fields_': fields})
+
+    fields = list({
+        'export_rva': c_uint32,
+        'forwarder_rva': c_uint32,
+    }.items())
+    structs['ExportAddressTable'] = type('ExportAddressTable',
+                                         base_types,
+                                         {'_fields_': fields})
+
+    fields = list({
+        'import_lookup_table_rva': c_uint32,
+        'timestamp': c_uint32,
+        'forwarder_chain': c_uint32,
+        'name_rva': c_uint32,
+        'import_address_table_rva': c_uint32,
+    }.items())
+    structs['ImportDirectoryTable'] = type('ImportDirectoryTable',
+                                           base_types,
+                                           {'_fields_': fields})
+
+    # TODO: Make this a proper union
+    structs['ImportLookupTable'] = sizet_type
+
     return structs
 
 
@@ -374,7 +595,7 @@ class PE:
                                          self.contents,
                                          coff_magic_offset)[0]
 
-        next_offset = coff_hdr_offset
+        self.__next_offset = coff_hdr_offset
 
         # the magic number is in an optional headers, so there isn't
         # a guarantee that the value will actually be in the designated
@@ -386,36 +607,38 @@ class PE:
 
         additional_bases = (NiceHexFieldRepr,)
 
-        self._structs = create_structures_for_bitness(self._pe_hdr_type,
-                                                      additional_bases=additional_bases)
+        self._structs = create_pe_structures(self._pe_hdr_type,
+                                             additional_bases=additional_bases)
+        self._parse_pe_header()
 
+    def _parse_pe_header(self):
         self.COFFHdr = self._structs['COFFHdr']()
         self.__populate_field_from_offset(self.COFFHdr,
-                                          next_offset)
-        next_offset += sizeof(self.COFFHdr)
+                                          self.__next_offset)
+        self.__next_offset += sizeof(self.COFFHdr)
 
         # Start optional headers
 
         self.StandardCOFFData = self._structs['StandardCOFFData']()
         self.__populate_field_from_offset(self.StandardCOFFData,
-                                          next_offset)
-        next_offset += sizeof(self.StandardCOFFData)
+                                          self.__next_offset)
+        self.__next_offset += sizeof(self.StandardCOFFData)
 
         self.WindowsCOFFData = self._structs['WindowsCOFFData']()
         self.__populate_field_from_offset(self.WindowsCOFFData,
-                                          next_offset)
-        next_offset += sizeof(self.WindowsCOFFData)
+                                          self.__next_offset)
+        self.__next_offset += sizeof(self.WindowsCOFFData)
 
         self.DataDirectories = self._structs['DataDirectories']()
         self.__populate_field_from_offset(self.DataDirectories,
-                                          next_offset)
-        next_offset += sizeof(self.DataDirectories)
+                                          self.__next_offset)
+        self.__next_offset += sizeof(self.DataDirectories)
 
         sect_tbl_typ = self._structs['SectionTable']*self.COFFHdr.num_sections
         self.SectionTable = sect_tbl_typ()
         self.__populate_field_from_offset(self.SectionTable,
-                                          next_offset)
-        next_offset += sizeof(self.SectionTable)
+                                          self.__next_offset)
+        self.__next_offset += sizeof(self.SectionTable)
 
     def __populate_field_from_offset(self, ctype, offset):
         write_into_ctype(ctype, self.contents[offset:])
@@ -425,4 +648,4 @@ class PE:
 
 
 
-# ipc_pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "ipconfig.exe"))
+ipc_pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "ipconfig.exe"))
