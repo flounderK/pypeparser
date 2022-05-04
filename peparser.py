@@ -463,6 +463,16 @@ def create_pe_structures(petype=PEHdrType.PE32,
                                                 '__packed__': True})
 
     fields = list({
+        'virtual_address': c_uint32,
+        'symbol_table_index': c_uint32,
+        'type': c_uint16,
+    }.items())
+    structs['COFFRelocation'] = type('COFFRelocation',
+                                     base_types,
+                                     {'_fields_': fields,
+                                      '__packed__': True})
+
+    fields = list({
         'characteristics': c_uint32,
         'time_data_stamp': c_uint32,
         'major_version': c_uint16,
@@ -560,6 +570,54 @@ def create_pe_structures(petype=PEHdrType.PE32,
 
     # TODO: Make this a proper union
     structs['ImportLookupTable'] = sizet_type
+
+
+    fields = list({
+        'raw_data_start_va': sizet_type,
+        'raw_data_end_va': sizet_type,
+        'address_of_index': sizet_type,
+        'address_of_callbacks': sizet_type,
+        'size_of_zero_fill': c_uint32,
+        'characteristics': c_uint32,
+    }.items())
+    structs['TLSDirectory'] = type('TLSDirectory',
+                                   base_types,
+                                   {'_fields_': fields})
+
+    fields = list({
+        'characteristics': c_uint32,
+        'timestamp': c_uint32,
+        'major_version': c_uint16,
+        'minor_version': c_uint16,
+        'global_flags_clear': c_uint32,
+        'global_flags_set': c_uint32,
+        'critical_section_default_timeout': c_uint32,
+        'decommit_free_block_threshold': sizet_type,
+        'lock_prefix_table': sizet_type,
+        'max_allocation_size': sizet_type,
+        'virtual_memory_threshold': sizet_type,
+        'process_affinity_mask': sizet_type,
+        'process_heap_flags': c_uint32,
+        'csdversion': c_uint16,
+        '_reserved': c_uint16,
+        'editlist': sizet_type,
+        'securitycookie': sizet_type,
+        'sehandler_table': sizet_type,
+        'sehandler_count': sizet_type,
+        'guard_cf_check_function_pointer': sizet_type,
+        'guard_cf_dispatch_function_pointer': sizet_type,
+        'guard_cf_function_table': sizet_type,
+        'guard_cf_function_count': sizet_type,
+        'guard_flags': c_uint32,
+        'code_integrity': c_ubyte*12,
+        'guard_address_taken_iat_entry_table': sizet_type,
+        'guard_address_taken_iat_entry_count': sizet_type,
+        'guard_long_jump_target_table': sizet_type,
+        'guard_long_jump_target_count': sizet_type,
+    }.items())
+    structs['LoadConfiguration'] = type('LoadConfiguration',
+                                        base_types,
+                                        {'_fields_': fields})
 
     return structs
 
