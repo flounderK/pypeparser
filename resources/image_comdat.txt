@@ -1,0 +1,18 @@
+IMAGE_COMDAT_SELECT_NODUPLICATES
+1
+If this symbol is already defined, the linker issues a "multiply defined symbol" error.
+IMAGE_COMDAT_SELECT_ANY
+2
+Any section that defines the same COMDAT symbol can be linked; the rest are removed.
+IMAGE_COMDAT_SELECT_SAME_SIZE
+3
+The linker chooses an arbitrary section among the definitions for this symbol. If all definitions are not the same size, a "multiply defined symbol" error is issued.
+IMAGE_COMDAT_SELECT_EXACT_MATCH
+4
+The linker chooses an arbitrary section among the definitions for this symbol. If all definitions do not match exactly, a "multiply defined symbol" error is issued.
+IMAGE_COMDAT_SELECT_ASSOCIATIVE
+5
+The section is linked if a certain other COMDAT section is linked. This other section is indicated by the Number field of the auxiliary symbol record for the section definition. This setting is useful for definitions that have components in multiple sections (for example, code in one and data in another), but where all must be linked or discarded as a set. The other section this section is associated with must be a COMDAT section, which can be another associative COMDAT section. An associative COMDAT section's section association chain can't form a loop. The section association chain must eventually come to a COMDAT section that doesn't have IMAGE_COMDAT_SELECT_ASSOCIATIVE set.
+IMAGE_COMDAT_SELECT_LARGEST
+6
+The linker chooses the largest definition from among all of the definitions for this symbol. If multiple definitions have this size, the choice between them is arbitrary.
