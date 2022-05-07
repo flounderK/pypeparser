@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import ctypes
-from ctypes import Structure, c_ubyte, c_uint8, c_uint16, c_uint32, c_uint64, byref, memmove, cast, POINTER, addressof, BigEndianStructure, LittleEndianStructure, sizeof
+from ctypes import Structure, c_ubyte, c_uint8, c_uint16, c_uint32, c_uint64, byref, memmove, cast, POINTER, addressof, BigEndianStructure, LittleEndianStructure, sizeof, Union
 import struct
 from struct import unpack_from
 import os
@@ -216,8 +216,10 @@ def create_pe_structures(petype=PEHdrType.PE32,
     structs = {}
     if endian == PEEndian.LITTLE_ENDIAN:
         structure_type = LittleEndianStructure
+        union_type = Union
     elif endian == PEEndian.BIG_ENDIAN:
         structure_type = BigEndianStructure
+        union_type = Union
     else:
         raise Exception("InvalidEndian")
 
@@ -235,6 +237,8 @@ def create_pe_structures(petype=PEHdrType.PE32,
     base_types = (structure_type,)
     if additional_bases is not None:
         base_types = base_types + additional_bases
+
+    base_union_types = (union_type,)
 
     # TODO: signature doesn't appear in object files
     fields = list({
@@ -486,12 +490,28 @@ def create_pe_structures(petype=PEHdrType.PE32,
 
     fields = list({
         'name_offset': c_uint32,
-        'integer_id': c_uint32,
         'data_entry_offset': c_uint32,
+    }.items())
+    rsrc_dir_name_entry = type('ResourceDirectoryNameEntry',
+                               base_types,
+                               {'_fields_': fields})
+    structs['ResourceDirectoryNameEntry'] = rsrc_dir_name_entry
+
+    fields = list({
+        'integer_id': c_uint32,
         'subdirectory_offset': c_uint32,
     }.items())
+    rsrc_dir_id_entry = type('ResourceDirectoryIDEntry',
+                             base_types,
+                             {'_fields_': fields})
+    structs['ResourceDirectoryIDEntry'] = rsrc_dir_id_entry
+
+    fields = list({
+        'name_entry': rsrc_dir_name_entry,
+        'id_entry': rsrc_dir_id_entry,
+    }.items())
     structs['ResourceDirectoryEntry'] = type('ResourceDirectoryEntry',
-                                             base_types,
+                                             base_union_types,
                                              {'_fields_': fields})
 
     # TODO: might be a cleaner way
@@ -570,7 +590,6 @@ def create_pe_structures(petype=PEHdrType.PE32,
 
     # TODO: Make this a proper union
     structs['ImportLookupTable'] = sizet_type
-
 
     fields = list({
         'raw_data_start_va': sizet_type,
@@ -667,43 +686,83 @@ class PE:
 
         self._structs = create_pe_structures(self._pe_hdr_type,
                                              additional_bases=additional_bases)
+        self._sections = {}
         self._parse_pe_header()
+        self._parse_resources()
 
     def _parse_pe_header(self):
         self.COFFHdr = self._structs['COFFHdr']()
-        self.__populate_field_from_offset(self.COFFHdr,
-                                          self.__next_offset)
+        self._populate_field_from_offset(self.COFFHdr,
+                                         self.__next_offset)
         self.__next_offset += sizeof(self.COFFHdr)
 
         # Start optional headers
 
         self.StandardCOFFData = self._structs['StandardCOFFData']()
-        self.__populate_field_from_offset(self.StandardCOFFData,
-                                          self.__next_offset)
+        self._populate_field_from_offset(self.StandardCOFFData,
+                                         self.__next_offset)
         self.__next_offset += sizeof(self.StandardCOFFData)
 
         self.WindowsCOFFData = self._structs['WindowsCOFFData']()
-        self.__populate_field_from_offset(self.WindowsCOFFData,
-                                          self.__next_offset)
+        self._populate_field_from_offset(self.WindowsCOFFData,
+                                         self.__next_offset)
         self.__next_offset += sizeof(self.WindowsCOFFData)
 
         self.DataDirectories = self._structs['DataDirectories']()
-        self.__populate_field_from_offset(self.DataDirectories,
-                                          self.__next_offset)
+        self._populate_field_from_offset(self.DataDirectories,
+                                         self.__next_offset)
         self.__next_offset += sizeof(self.DataDirectories)
 
         sect_tbl_typ = self._structs['SectionTable']*self.COFFHdr.num_sections
         self.SectionTable = sect_tbl_typ()
-        self.__populate_field_from_offset(self.SectionTable,
-                                          self.__next_offset)
+        self._populate_field_from_offset(self.SectionTable,
+                                         self.__next_offset)
         self.__next_offset += sizeof(self.SectionTable)
 
-    def __populate_field_from_offset(self, ctype, offset):
+        # create a section name to section mapping
+        self._sections = {bytes(i.name).replace(b'\x00', b'').decode(): i
+                          for i in self.SectionTable}
+
+    def _populate_field_from_offset(self, ctype, offset):
         write_into_ctype(ctype, self.contents[offset:])
 
     def __get_dos_header_bytes(self):
         return self.contents[2:self.__PE_HDR_PTR_OFF]
 
+    def _parse_resources(self):
+        self._rsrc_header = self._sections.get('.rsrc')
+        if self._rsrc_header is None:
+            return
+        # bytes_start = self._rsrc_header.pointer_to_raw_data
+        # bytes_end = bytes_start + self._rsrc_header.size_of_raw_data
+        # rsrc_bytes = self.contents[bytes_start:bytes_end]
+        self._rsrc_dir_tab = self._structs['ResourceDirectoryTable']()
+        next_offset = self._rsrc_header.pointer_to_raw_data
+        self._populate_field_from_offset(self._rsrc_dir_tab, next_offset)
+
+        next_offset += sizeof(self._rsrc_dir_tab)
+
+        # looks like a union
+        rsrc_dir_name_entries_type = (self._rsrc_dir_tab.number_of_name_entries*self._structs['ResourceDirectoryNameEntry'])
+        self._rsrc_dir_names = rsrc_dir_name_entries_type()
+        self._populate_field_from_offset(self._rsrc_dir_names, next_offset)
+
+        next_offset += sizeof(self._rsrc_dir_names)
+
+        rsrc_dir_id_entries_type = (self._rsrc_dir_tab.number_of_id_entries*self._structs['ResourceDirectoryIDEntry'])
+        self._rsrc_dir_ids = rsrc_dir_id_entries_type()
+        self._populate_field_from_offset(self._rsrc_dir_ids, next_offset)
+
+        next_offset += sizeof(self._rsrc_dir_names)
+
+    def _get_section_bytes(self, section_name):
+        header = self._sections.get(section_name)
+        if header is None:
+            return b''
+        bytes_start = header.pointer_to_raw_data
+        bytes_end = bytes_start + header.size_of_raw_data
+        return self.contents[bytes_start:bytes_end]
 
 
-ipc_pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "ipconfig.exe"))
+
+pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "ready_unpacked.exe"))
