@@ -832,7 +832,7 @@ class PE:
             next_offset += sizeof(imp_dir_tab)
             # TODO: probably a more efficient/more clear way to
             # make this check
-            if len(set(bytes(imp_dir_tab))) == 0:
+            if len(set(bytes(imp_dir_tab))) == 1:
                 # empty entry, last one
                 break
             self._import_directory_entries.append(imp_dir_tab)
