@@ -329,6 +329,8 @@ def create_pe_structures(petype=PEHdrType.PE32,
                                       base_types,
                                       {'_fields_': fields})
 
+    # TODO: add a __repr_map__ for this to print characteristics
+    # in a readable manner
     fields = list({
         'name': c_ubyte*8,
         'virtual_size': c_uint32,
@@ -665,6 +667,7 @@ class PE:
         self._rsrc_data_entries = []
         self._rsrc_data = []
         self._import_directory_entries = []
+        self._imported_libraries = []
 
         self.__next_offset = coff_hdr_offset
 
@@ -824,18 +827,28 @@ class PE:
         imp_dir_table_type = self._structs['ImportDirectoryTable']
         next_offset = 0
         while next_offset < len(import_table_bytes):
-            print(f"next_offset {next_offset}")
             imp_dir_tab = imp_dir_table_type()
             write_into_ctype(imp_dir_tab, import_table_bytes[next_offset:])
             next_offset += sizeof(imp_dir_tab)
+            # TODO: probably a more efficient/more clear way to
+            # make this check
             if len(set(bytes(imp_dir_tab))) == 0:
                 # empty entry, last one
                 break
             self._import_directory_entries.append(imp_dir_tab)
 
+        # actually get the name of the library for each directory
+        for entry in self._import_directory_entries:
+            name_offset = self._virtual_address_to_offset(entry.name_rva)
+            # TODO: there is DEFINITELY a way to do this without needing
+            # the bytes object creation. Might add a fastpath with
+            # a cast to a statically sized array
+            name_bytes = bytes(self.contents[name_offset:])
+            libname = ctypes.string_at(ctypes.create_string_buffer(name_bytes))
+            libname = libname.decode()
+            self._imported_libraries.append(libname)
 
-
-        ...
+        # TODO: Import lookup table, hint table, import address table
 
 
 pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "ready_unpacked.exe"))
