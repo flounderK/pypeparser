@@ -178,6 +178,16 @@ def write_into_ctype(ctype, bytevals):
     memmove(byref(ctype), temp_backing, sizeof_self)
 
 
+def cast_ctype_from_bytearray(ctype, byte_array, offset=0):
+    """
+    Cast ctype from bytearray. Modifications made to ctype instance
+    will be observable in bytearray
+    """
+    if not hasattr(ctype, '__bases__'):
+        ctype = type(ctype)
+    return ((ctype*1).from_buffer(byte_array, offset))[0]
+
+
 def get_dict_from_ctype_struct(ctype):
     return {k: getattr(ctype, k) for k, v in ctype._fields_}
 
@@ -764,7 +774,7 @@ class PE:
             # write into an existing instance of the type
             write_into_ctype(ctype, self.contents[offset:])
             return ctype
-        return ((ctype*1).from_buffer(self.contents, offset))[0]
+        return cast_ctype_from_bytearray(ctype, self.contents, offset)
 
     def __get_dos_header_bytes(self):
         return self.contents[2:self.__PE_HDR_PTR_OFF]
