@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import ctypes
-from ctypes import Structure, c_ubyte, c_uint8, c_uint16, c_uint32, c_uint64, byref, memmove, cast, POINTER, addressof, BigEndianStructure, LittleEndianStructure, sizeof, Union
+from ctypes import Structure, c_ubyte, c_uint8, c_uint16, c_uint32, c_uint64, byref, memmove, cast, POINTER, addressof, BigEndianStructure, LittleEndianStructure, sizeof, Union, string_at, create_string_buffer
 import struct
 from struct import unpack_from
 import os
 import enum
 import _ctypes
+from collections import defaultdict
 
 
 class PEEndian(enum.IntEnum):
@@ -181,6 +182,13 @@ def get_dict_from_ctype_struct(ctype):
     return {k: getattr(ctype, k) for k, v in ctype._fields_}
 
 
+def is_zeroed_ctype(ctype):
+    type_bytes = bytes(ctype)
+    if len(set(type_bytes)) == 1 and type_bytes[0] == 0:
+        return True
+    return False
+
+
 class NiceHexFieldRepr:
     """
     Class to Insert a readable repr to improve debugging
@@ -234,6 +242,7 @@ def create_pe_structures(petype=PEHdrType.PE32,
     else:
         raise Exception("Invalid PE type")
 
+    structs['size_t'] = sizet_type
     base_types = (structure_type,)
     if additional_bases is not None:
         base_types = base_types + additional_bases
@@ -576,8 +585,17 @@ def create_pe_structures(petype=PEHdrType.PE32,
                                            base_types,
                                            {'_fields_': fields})
 
-    # TODO: Make this a proper union
-    structs['ImportLookupTable'] = sizet_type
+    # not making this a proper union to avoid big endian
+    # union woes
+    fields = [
+        ('ordinal_number_or_hint_table_rva', sizet_type,
+         (sizeof(sizet_type)*8)-1),
+        ('ordinal_or_name_flag', sizet_type, 1),
+    ]
+    structs['ImportLookupTable'] = type('ImportLookupTable',
+                                        base_types,
+                                        {'_fields_': fields,
+                                         '__packed__': True})
 
     fields = list({
         'raw_data_start_va': sizet_type,
@@ -667,7 +685,9 @@ class PE:
         self._rsrc_data_entries = []
         self._rsrc_data = []
         self._import_directory_entries = []
-        self._imported_libraries = []
+        self.imports = defaultdict(list)
+
+        self._fastpath_string_type = c_ubyte*64
 
         self.__next_offset = coff_hdr_offset
 
@@ -723,7 +743,15 @@ class PE:
                           for i in self.SectionTable}
 
     def _populate_field_from_offset(self, ctype, offset):
-        write_into_ctype(ctype, self.contents[offset:])
+        """
+        Either write into an existing instance of the type,
+        or create a new instance with a cast
+        """
+        if not hasattr(ctype, '__bases__'):
+            # write into an existing instance of the type
+            write_into_ctype(ctype, self.contents[offset:])
+            return ctype
+        return ((ctype*1).from_buffer(self.contents, offset))[0]
 
     def __get_dos_header_bytes(self):
         return self.contents[2:self.__PE_HDR_PTR_OFF]
@@ -815,7 +843,8 @@ class PE:
         num_entries = pdata_header.virtual_size // sizeof(function_table_entry_type)
         function_table_type = function_table_entry_type*num_entries
         function_table = function_table_type()
-        self._populate_field_from_offset(function_table, pdata_header.pointer_to_raw_data)
+        self._populate_field_from_offset(function_table,
+                                         pdata_header.pointer_to_raw_data)
         self._exception_handler_functions = function_table
 
     def _parse_imports(self):
@@ -832,7 +861,7 @@ class PE:
             next_offset += sizeof(imp_dir_tab)
             # TODO: probably a more efficient/more clear way to
             # make this check
-            if len(set(bytes(imp_dir_tab))) == 1:
+            if is_zeroed_ctype(imp_dir_tab):
                 # empty entry, last one
                 break
             self._import_directory_entries.append(imp_dir_tab)
@@ -841,16 +870,62 @@ class PE:
         for entry in self._import_directory_entries:
             if entry.name_rva == 0:
                 continue
-            name_offset = self._virtual_address_to_offset(entry.name_rva)
-            # TODO: there is DEFINITELY a way to do this without needing
-            # the bytes object creation. Might add a fastpath with
-            # a cast to a statically sized array
-            name_bytes = bytes(self.contents[name_offset:])
-            libname = ctypes.string_at(ctypes.create_string_buffer(name_bytes))
-            libname = libname.decode()
-            self._imported_libraries.append(libname)
+            libname = self._string_from_va(entry.name_rva)
+            import_address_table = self._get_import_lookup_table_at_rva(entry.import_address_table_rva)
+            for sym in import_address_table:
+                if sym.ordinal_or_name_flag == 1:
+                    self.imports[libname].append(sym.ordinal_number_or_hint_table_rva)
+                    continue
+                # TODO: maybe parse hint table correctly
+                sym_name_string = self._string_from_va(sym.ordinal_number_or_hint_table_rva+2)
+                self.imports[libname].append(sym_name_string)
 
         # TODO: Import lookup table, hint table, import address table
+
+    def _string_from_offset(self, offset):
+        """
+        Fastpath tries to avoid makeing a potentially very
+        large bytes object
+        """
+        try:
+            cstring_buffer = self._fastpath_string_type.from_buffer(self.contents, offset)
+        except:
+            cstring_buffer = create_string_buffer(bytes(self.contents[offset:]))
+
+        cstring = string_at(cstring_buffer)
+        return cstring.decode()
+
+    def _string_from_va(self, va):
+        offset = self._virtual_address_to_offset(va)
+        return self._string_from_offset(offset)
+
+    def _get_non_zero_ctype_entries_from_off(self, ctype, offset):
+        """
+        get the entries of an array of structs/ctypes that is known
+        to end with a zeroed out struct/ctype instance
+        """
+        # populate_field will rely on this being a ctype type,
+        # if it is an instance then the same entry will be populated
+        # over and over
+        if not hasattr(ctype, '__bases__'):
+            ctype = type(ctype)
+        table_entries = []
+        while True:
+            entry = self._populate_field_from_offset(ctype,
+                                                     offset)
+            offset += sizeof(entry)
+            if is_zeroed_ctype(entry):
+                break
+            table_entries.append(entry)
+        return table_entries
+
+    def _get_import_lookup_table_at_rva(self, va):
+        import_lookup_tab_typ = self._structs['ImportLookupTable']
+        offset = self._virtual_address_to_offset(va)
+        table = self._get_non_zero_ctype_entries_from_off(import_lookup_tab_typ,
+                                                          offset)
+        return table
+
 
 
 pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "ready_unpacked.exe"))
