@@ -927,5 +927,5 @@ class PE:
         return table
 
 
-
-pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "ready_unpacked.exe"))
+if __name__ == '__main__':
+    pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "ready_unpacked.exe"))
