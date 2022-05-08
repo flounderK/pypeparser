@@ -685,7 +685,10 @@ class PE:
         self._rsrc_data_entries = []
         self._rsrc_data = []
         self._import_directory_entries = []
+        self._import_lookup_tables = {}
         self.imports = defaultdict(list)
+        self._address = 0
+        self.sym = {}
 
         self._fastpath_string_type = c_ubyte*64
 
@@ -708,6 +711,16 @@ class PE:
         self._parse_resources()
         self._parse_pdata()
         self._parse_imports()
+
+    @property
+    def address(self):
+        return self._address
+
+    @address.setter
+    def address(self, value):
+        for k in self.sym.keys():
+            self.sym[k] = self.sym[k] - self._address + value
+        self._address = value
 
     def _parse_pe_header(self):
         self.COFFHdr = self._structs['COFFHdr']()
@@ -854,33 +867,30 @@ class PE:
         import_table_bytes = self.contents[off:off+size]
         self._import_table_bytes = import_table_bytes
         imp_dir_table_type = self._structs['ImportDirectoryTable']
-        next_offset = 0
-        while next_offset < len(import_table_bytes):
-            imp_dir_tab = imp_dir_table_type()
-            write_into_ctype(imp_dir_tab, import_table_bytes[next_offset:])
-            next_offset += sizeof(imp_dir_tab)
-            # TODO: probably a more efficient/more clear way to
-            # make this check
-            if is_zeroed_ctype(imp_dir_tab):
-                # empty entry, last one
-                break
-            self._import_directory_entries.append(imp_dir_tab)
+        imp_dir_entries = self._get_non_zero_ctype_entries_from_off(imp_dir_table_type, off)
+        self._import_directory_entries.extend(imp_dir_entries)
 
         # actually get the name of the library for each directory
         for entry in self._import_directory_entries:
             if entry.name_rva == 0:
                 continue
+            sizet_type = self._structs['size_t']
             libname = self._string_from_va(entry.name_rva)
             import_address_table = self._get_import_lookup_table_at_rva(entry.import_address_table_rva)
-            for sym in import_address_table:
+            # TODO: might want to copy this as a non-casted type
+            self._import_lookup_tables[libname] = import_address_table
+            for i, sym in enumerate(import_address_table):
+                addr = (i*sizeof(sizet_type)) + entry.import_address_table_rva
                 if sym.ordinal_or_name_flag == 1:
                     self.imports[libname].append(sym.ordinal_number_or_hint_table_rva)
+                    self.sym[f"imp.{libname}.ord{i}"] = addr
                     continue
                 # TODO: maybe parse hint table correctly
                 sym_name_string = self._string_from_va(sym.ordinal_number_or_hint_table_rva+2)
                 self.imports[libname].append(sym_name_string)
+                self.sym[f"imp.{sym_name_string}"] = addr
 
-        # TODO: Import lookup table, hint table, import address table
+        # TODO: hint table
 
     def _string_from_offset(self, offset):
         """
