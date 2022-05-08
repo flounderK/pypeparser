@@ -489,30 +489,16 @@ def create_pe_structures(petype=PEHdrType.PE32,
                                              {'_fields_': fields})
 
     fields = list({
-        'name_offset': c_uint32,
-        'data_entry_offset': c_uint32,
+        'integer_id_or_name_offset': c_uint32,
     }.items())
-    rsrc_dir_name_entry = type('ResourceDirectoryNameEntry',
-                               base_types,
-                               {'_fields_': fields})
-    structs['ResourceDirectoryNameEntry'] = rsrc_dir_name_entry
-
-    fields = list({
-        'integer_id': c_uint32,
-        'subdirectory_offset': c_uint32,
-    }.items())
-    rsrc_dir_id_entry = type('ResourceDirectoryIDEntry',
+    # TODO: does big endian change the order of these?
+    fields.append(('offset', c_uint32, 31))
+    fields.append(('data_entry_or_subdirectory', c_uint32, 1))
+    rsrc_dir_id_entry = type('ResourceDirectoryEntry',
                              base_types,
-                             {'_fields_': fields})
-    structs['ResourceDirectoryIDEntry'] = rsrc_dir_id_entry
-
-    fields = list({
-        'name_entry': rsrc_dir_name_entry,
-        'id_entry': rsrc_dir_id_entry,
-    }.items())
-    structs['ResourceDirectoryEntry'] = type('ResourceDirectoryEntry',
-                                             base_union_types,
-                                             {'_fields_': fields})
+                             {'_fields_': fields,
+                              '__packed__': True})
+    structs['ResourceDirectoryEntry'] = rsrc_dir_id_entry
 
     # TODO: might be a cleaner way
     fields = list({
@@ -649,7 +635,7 @@ class PE:
     def __init__(self, filepath):
         self.filepath = filepath
         with open(filepath, "rb") as f:
-            self.contents = f.read()
+            self.contents = bytearray(f.read())
 
         assert self.contents[:2] == self._MZ_SIG
         self.__dos_header_bytes = self.__get_dos_header_bytes()
@@ -671,6 +657,14 @@ class PE:
         self._magic_number = unpack_from(self._uint16_pack,
                                          self.contents,
                                          coff_magic_offset)[0]
+        self._exception_handler_functions = None
+
+        self._rsrc_dir_tabs = []
+        self._rsrc_dir_names = []
+        self._rsrc_dir_ids = []
+        self._rsrc_data_entries = []
+        self._rsrc_data = []
+        self._import_directory_entries = []
 
         self.__next_offset = coff_hdr_offset
 
@@ -689,6 +683,8 @@ class PE:
         self._sections = {}
         self._parse_pe_header()
         self._parse_resources()
+        self._parse_pdata()
+        self._parse_imports()
 
     def _parse_pe_header(self):
         self.COFFHdr = self._structs['COFFHdr']()
@@ -733,27 +729,55 @@ class PE:
         self._rsrc_header = self._sections.get('.rsrc')
         if self._rsrc_header is None:
             return
-        # bytes_start = self._rsrc_header.pointer_to_raw_data
-        # bytes_end = bytes_start + self._rsrc_header.size_of_raw_data
-        # rsrc_bytes = self.contents[bytes_start:bytes_end]
-        self._rsrc_dir_tab = self._structs['ResourceDirectoryTable']()
-        next_offset = self._rsrc_header.pointer_to_raw_data
-        self._populate_field_from_offset(self._rsrc_dir_tab, next_offset)
+        self._rsrc_bytes = self._get_section_bytes('.rsrc')
+        next_offset = 0
+        self.__parse_rsrc_dir_tab_at(next_offset)
 
-        next_offset += sizeof(self._rsrc_dir_tab)
+    def __parse_rsrc_dir_tab_at(self, offset):
+        rsrc_dir_tab_type = self._structs['ResourceDirectoryTable']
+        rsrc_dir_tab = rsrc_dir_tab_type()
+        next_offset = offset
 
-        # looks like a union
-        rsrc_dir_name_entries_type = (self._rsrc_dir_tab.number_of_name_entries*self._structs['ResourceDirectoryNameEntry'])
-        self._rsrc_dir_names = rsrc_dir_name_entries_type()
-        self._populate_field_from_offset(self._rsrc_dir_names, next_offset)
+        write_into_ctype(rsrc_dir_tab, self._rsrc_bytes[next_offset:])
+        # self._populate_field_from_offset(rsrc_dir_tab, next_offset)
 
-        next_offset += sizeof(self._rsrc_dir_names)
+        self._rsrc_dir_tabs.append(rsrc_dir_tab)
+        next_offset += sizeof(rsrc_dir_tab)
 
-        rsrc_dir_id_entries_type = (self._rsrc_dir_tab.number_of_id_entries*self._structs['ResourceDirectoryIDEntry'])
-        self._rsrc_dir_ids = rsrc_dir_id_entries_type()
-        self._populate_field_from_offset(self._rsrc_dir_ids, next_offset)
+        rsrc_dir_entry_type = self._structs['ResourceDirectoryEntry']
+        # Name entries
+        rsrc_dir_name_entries_type = (rsrc_dir_tab.number_of_name_entries*rsrc_dir_entry_type)
+        rsrc_dir_names = rsrc_dir_name_entries_type()
 
-        next_offset += sizeof(self._rsrc_dir_names)
+        if sizeof(rsrc_dir_names) != 0:
+            write_into_ctype(rsrc_dir_names, self._rsrc_bytes[next_offset:])
+            # self._populate_field_from_offset(rsrc_dir_names, next_offset)
+            self._rsrc_dir_names.append(rsrc_dir_names)
+            next_offset += sizeof(rsrc_dir_names)
+
+        # ID Entries
+        rsrc_dir_id_entries_type = (rsrc_dir_tab.number_of_id_entries*rsrc_dir_entry_type)
+        rsrc_dir_ids = rsrc_dir_id_entries_type()
+        if sizeof(rsrc_dir_ids) != 0:
+            write_into_ctype(rsrc_dir_ids, self._rsrc_bytes[next_offset:])
+            # self._populate_field_from_offset(rsrc_dir_ids, next_offset)
+            self._rsrc_dir_ids.append(rsrc_dir_ids)
+            for i in rsrc_dir_ids:
+                if i.data_entry_or_subdirectory == 1:
+                    self.__parse_rsrc_dir_tab_at(i.offset)
+                else:
+                    rsrc_data_entry = self._structs['ResourceDataEntry']()
+                    write_into_ctype(rsrc_data_entry, self._rsrc_bytes[i.offset:])
+                    self._rsrc_data_entries.append(rsrc_data_entry)
+                    self._rsrc_data.append(self._get_rsrc_data(rsrc_data_entry))
+
+            next_offset += sizeof(rsrc_dir_ids)
+
+        return next_offset
+
+    def _get_rsrc_data(self, rsrc_data_entry):
+        offset = self._virtual_address_to_offset(rsrc_data_entry.data_rva)
+        return self.contents[offset:offset+rsrc_data_entry.size]
 
     def _get_section_bytes(self, section_name):
         header = self._sections.get(section_name)
@@ -763,6 +787,55 @@ class PE:
         bytes_end = bytes_start + header.size_of_raw_data
         return self.contents[bytes_start:bytes_end]
 
+    def _get_section_header_by_virtual_address(self, va):
+        for i in self.SectionTable:
+            if i.virtual_address <= va and va <= i.virtual_address+i.virtual_size:
+                return i
+
+    def _get_section_name_by_virtual_address(self, va):
+        s = self._get_section_header_by_virtual_address(va)
+        if s is None:
+            return ''
+        return bytes(s.name).replace(b'\x00', b'').decode()
+
+    def _virtual_address_to_offset(self, va):
+        section_header = self._get_section_header_by_virtual_address(va)
+        offset = (va - section_header.virtual_address)
+        return section_header.pointer_to_raw_data + offset
+
+    def _parse_pdata(self):
+        pdata_header = self._sections.get('.pdata')
+        if pdata_header is None:
+            return
+        # pdata_bytes = self._get_section_bytes('.pdata')
+        function_table_entry_type = self._structs['FunctionTableEntry']
+        num_entries = pdata_header.virtual_size // sizeof(function_table_entry_type)
+        function_table_type = function_table_entry_type*num_entries
+        function_table = function_table_type()
+        self._populate_field_from_offset(function_table, pdata_header.pointer_to_raw_data)
+        self._exception_handler_functions = function_table
+
+    def _parse_imports(self):
+        import_table_info = self.DataDirectories.import_table
+        off = self._virtual_address_to_offset(import_table_info.virtual_address)
+        size = import_table_info.size
+        import_table_bytes = self.contents[off:off+size]
+        self._import_table_bytes = import_table_bytes
+        imp_dir_table_type = self._structs['ImportDirectoryTable']
+        next_offset = 0
+        while next_offset < len(import_table_bytes):
+            print(f"next_offset {next_offset}")
+            imp_dir_tab = imp_dir_table_type()
+            write_into_ctype(imp_dir_tab, import_table_bytes[next_offset:])
+            next_offset += sizeof(imp_dir_tab)
+            if len(set(bytes(imp_dir_tab))) == 0:
+                # empty entry, last one
+                break
+            self._import_directory_entries.append(imp_dir_tab)
+
+
+
+        ...
 
 
 pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "ready_unpacked.exe"))
