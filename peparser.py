@@ -854,6 +854,8 @@ class PE:
 
     def _virtual_address_to_offset(self, va):
         section_header = self._get_section_header_by_virtual_address(va)
+        if section_header is None:
+            return 0
         offset = (va - section_header.virtual_address)
         return section_header.pointer_to_raw_data + offset
 
