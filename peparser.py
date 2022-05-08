@@ -931,12 +931,19 @@ class PE:
         Fastpath tries to avoid makeing a potentially very
         large bytes object
         """
+        use_slowpath = False
         try:
             cstring_buffer = self._fastpath_string_type.from_buffer(self.contents, offset)
+            cstring = string_at(cstring_buffer)
+            if len(cstring) == sizeof(self._fastpath_string_type):
+                use_slowpath = True
         except:
-            cstring_buffer = create_string_buffer(bytes(self.contents[offset:]))
+            use_slowpath = True
 
-        cstring = string_at(cstring_buffer)
+        if use_slowpath:
+            cstring_buffer = create_string_buffer(bytes(self.contents[offset:]))
+            cstring = string_at(cstring_buffer)
+
         return cstring.decode()
 
     def _string_from_va(self, va):
