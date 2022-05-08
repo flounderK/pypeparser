@@ -839,6 +839,8 @@ class PE:
 
         # actually get the name of the library for each directory
         for entry in self._import_directory_entries:
+            if entry.name_rva == 0:
+                continue
             name_offset = self._virtual_address_to_offset(entry.name_rva)
             # TODO: there is DEFINITELY a way to do this without needing
             # the bytes object creation. Might add a fastpath with
