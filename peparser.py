@@ -193,10 +193,29 @@ def get_dict_from_ctype_struct(ctype):
 
 
 def is_zeroed_ctype(ctype):
+    if sizeof(ctype) == 0:
+        return True
     type_bytes = bytes(ctype)
     if len(set(type_bytes)) == 1 and type_bytes[0] == 0:
         return True
     return False
+
+
+def get_non_zero_ctype_entries_from_off(ctype, byte_array, offset):
+    """
+    Get the entries of an array of structs/ctypes from the given bytearray
+    that is known to end with a zeroed out struct/ctype instance
+    """
+    if not hasattr(ctype, '__bases__'):
+        ctype = type(ctype)
+    table_entries = []
+    while True:
+        entry = cast_ctype_from_bytearray(ctype, byte_array, offset)
+        offset += sizeof(entry)
+        if is_zeroed_ctype(entry):
+            break
+        table_entries.append(entry)
+    return table_entries
 
 
 class NiceHexFieldRepr:
@@ -223,8 +242,8 @@ class NiceHexFieldRepr:
 
 
 def create_pe_structures(petype=PEHdrType.PE32,
-                                  endian=PEEndian.LITTLE_ENDIAN,
-                                  additional_bases=None):
+                         endian=PEEndian.LITTLE_ENDIAN,
+                         additional_bases=None):
     """
     This function serves as a factory for all of the structure types
     for parsing a typical pe file. It also supports injecting additional
@@ -733,6 +752,7 @@ class PE:
         self._address = value
 
     def _parse_pe_header(self):
+        # TODO: switch these to casts instead of memmoves
         self.COFFHdr = self._structs['COFFHdr']()
         self._populate_field_from_offset(self.COFFHdr,
                                          self.__next_offset)
@@ -830,7 +850,7 @@ class PE:
         return next_offset
 
     def _get_rsrc_data(self, rsrc_data_entry):
-        offset = self._virtual_address_to_offset(rsrc_data_entry.data_rva)
+        offset = self.virtual_address_to_offset(rsrc_data_entry.data_rva)
         return self.contents[offset:offset+rsrc_data_entry.size]
 
     def _get_section_bytes(self, section_name):
@@ -852,7 +872,7 @@ class PE:
             return ''
         return bytes(s.name).replace(b'\x00', b'').decode()
 
-    def _virtual_address_to_offset(self, va):
+    def virtual_address_to_offset(self, va):
         section_header = self._get_section_header_by_virtual_address(va)
         if section_header is None:
             return 0
@@ -874,12 +894,14 @@ class PE:
 
     def _parse_imports(self):
         import_table_info = self.DataDirectories.import_table
-        off = self._virtual_address_to_offset(import_table_info.virtual_address)
+        off = self.virtual_address_to_offset(import_table_info.virtual_address)
         size = import_table_info.size
         import_table_bytes = self.contents[off:off+size]
         self._import_table_bytes = import_table_bytes
         imp_dir_table_type = self._structs['ImportDirectoryTable']
-        imp_dir_entries = self._get_non_zero_ctype_entries_from_off(imp_dir_table_type, off)
+        imp_dir_entries = get_non_zero_ctype_entries_from_off(imp_dir_table_type,
+                                                              self.contents,
+                                                              off)
         self._import_directory_entries.extend(imp_dir_entries)
 
         # actually get the name of the library for each directory
@@ -918,34 +940,15 @@ class PE:
         return cstring.decode()
 
     def _string_from_va(self, va):
-        offset = self._virtual_address_to_offset(va)
+        offset = self.virtual_address_to_offset(va)
         return self._string_from_offset(offset)
-
-    def _get_non_zero_ctype_entries_from_off(self, ctype, offset):
-        """
-        get the entries of an array of structs/ctypes that is known
-        to end with a zeroed out struct/ctype instance
-        """
-        # populate_field will rely on this being a ctype type,
-        # if it is an instance then the same entry will be populated
-        # over and over
-        if not hasattr(ctype, '__bases__'):
-            ctype = type(ctype)
-        table_entries = []
-        while True:
-            entry = self._populate_field_from_offset(ctype,
-                                                     offset)
-            offset += sizeof(entry)
-            if is_zeroed_ctype(entry):
-                break
-            table_entries.append(entry)
-        return table_entries
 
     def _get_import_lookup_table_at_rva(self, va):
         import_lookup_tab_typ = self._structs['ImportLookupTable']
-        offset = self._virtual_address_to_offset(va)
-        table = self._get_non_zero_ctype_entries_from_off(import_lookup_tab_typ,
-                                                          offset)
+        offset = self.virtual_address_to_offset(va)
+        table = get_non_zero_ctype_entries_from_off(import_lookup_tab_typ,
+                                                    self.contents,
+                                                    offset)
         return table
 
 
