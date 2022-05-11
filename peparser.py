@@ -21,134 +21,6 @@ class PEHdrType(enum.IntEnum):
     PE32_P = 0x20b
 
 
-class ImageFileMachineType(enum.IntEnum):
-    IMAGE_FILE_MACHINE_UNKNOWN = 0x0
-    IMAGE_FILE_MACHINE_AM33 = 0x1d3
-    IMAGE_FILE_MACHINE_AMD64 = 0x8664
-    IMAGE_FILE_MACHINE_ARM = 0x1c0
-    IMAGE_FILE_MACHINE_ARM64 = 0xaa64
-    IMAGE_FILE_MACHINE_ARMNT = 0x1c4
-    IMAGE_FILE_MACHINE_EBC = 0xebc
-    IMAGE_FILE_MACHINE_I386 = 0x14c
-    IMAGE_FILE_MACHINE_IA64 = 0x200
-    IMAGE_FILE_MACHINE_LOONGARCH32 = 0x6232
-    IMAGE_FILE_MACHINE_LOONGARCH64 = 0x6264
-    IMAGE_FILE_MACHINE_M32R = 0x9041
-    IMAGE_FILE_MACHINE_MIPS16 = 0x266
-    IMAGE_FILE_MACHINE_MIPSFPU = 0x366
-    IMAGE_FILE_MACHINE_MIPSFPU16 = 0x466
-    IMAGE_FILE_MACHINE_POWERPC = 0x1f0
-    IMAGE_FILE_MACHINE_POWERPCFP = 0x1f1
-    IMAGE_FILE_MACHINE_R4000 = 0x166
-    IMAGE_FILE_MACHINE_RISCV32 = 0x5032
-    IMAGE_FILE_MACHINE_RISCV64 = 0x5064
-    IMAGE_FILE_MACHINE_RISCV128 = 0x5128
-    IMAGE_FILE_MACHINE_SH3 = 0x1a2
-    IMAGE_FILE_MACHINE_SH3DSP = 0x1a3
-    IMAGE_FILE_MACHINE_SH4 = 0x1a6
-    IMAGE_FILE_MACHINE_SH5 = 0x1a8
-    IMAGE_FILE_MACHINE_THUMB = 0x1c2
-    IMAGE_FILE_MACHINE_WCEMIPSV2 = 0x169
-
-
-class ImageFileCharacteristics(enum.IntFlag):
-    IMAGE_FILE_RELOCS_STRIPPED = 0x0001
-    IMAGE_FILE_EXECUTABLE_IMAGE = 0x0002
-    IMAGE_FILE_LINE_NUMS_STRIPPED = 0x0004
-    IMAGE_FILE_LOCAL_SYMS_STRIPPED = 0x0008
-    IMAGE_FILE_AGGRESSIVE_WS_TRIM = 0x0010
-    IMAGE_FILE_LARGE_ADDRESS_AWARE = 0x0020
-    IMAGE_FILE_BYTES_REVERSED_LO = 0x0080
-    IMAGE_FILE_32BIT_MACHINE = 0x0100
-    IMAGE_FILE_DEBUG_STRIPPED = 0x0200
-    IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP = 0x0400
-    IMAGE_FILE_NET_RUN_FROM_SWAP = 0x0800
-    IMAGE_FILE_SYSTEM = 0x1000
-    IMAGE_FILE_DLL = 0x2000
-    IMAGE_FILE_UP_SYSTEM_ONLY = 0x4000
-    IMAGE_FILE_BYTES_REVERSED_HI = 0x8000
-
-
-class ImageFileDLLCharacteristics(enum.IntFlag):
-    IMAGE_DLLCHARACTERISTICS_NONE = 0x0000
-    IMAGE_DLLCHARACTERISTICS_RESERVED_1 = 0x0001
-    IMAGE_DLLCHARACTERISTICS_RESERVED_2 = 0x0002
-    IMAGE_DLLCHARACTERISTICS_RESERVED_4 = 0x0004
-    IMAGE_DLLCHARACTERISTICS_RESERVED_8 = 0x0008
-    IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA = 0x0020
-    IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE = 0x0040
-    IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY = 0x0080
-    IMAGE_DLLCHARACTERISTICS_NX_COMPAT = 0x0100
-    IMAGE_DLLCHARACTERISTICS_NO_ISOLATION = 0x0200
-    IMAGE_DLLCHARACTERISTICS_NO_SEH = 0x0400
-    IMAGE_DLLCHARACTERISTICS_NO_BIND = 0x0800
-    IMAGE_DLLCHARACTERISTICS_APPCONTAINER = 0x1000
-    IMAGE_DLLCHARACTERISTICS_WDM_DRIVER = 0x2000
-    IMAGE_DLLCHARACTERISTICS_GUARD_CF = 0x4000
-    IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE = 0x8000
-
-
-class ImageFileSubsystem(enum.IntEnum):
-    IMAGE_SUBSYSTEM_UNKNOWN = 0
-    IMAGE_SUBSYSTEM_NATIVE = 1
-    IMAGE_SUBSYSTEM_WINDOWS_GUI = 2
-    IMAGE_SUBSYSTEM_WINDOWS_CUI = 3
-    IMAGE_SUBSYSTEM_OS2_CUI = 5
-    IMAGE_SUBSYSTEM_POSIX_CUI = 7
-    IMAGE_SUBSYSTEM_NATIVE_WINDOWS = 8
-    IMAGE_SUBSYSTEM_WINDOWS_CE_GUI = 9
-    IMAGE_SUBSYSTEM_EFI_APPLICATION = 10
-    IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER = 11
-    IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER = 12
-    IMAGE_SUBSYSTEM_EFI_ROM = 13
-    IMAGE_SUBSYSTEM_XBOX = 14
-    IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION = 16
-
-
-class ImageFileSectionFlags(enum.IntFlag):
-    IMAGE_SCN_RESERVED_0 = 0x00000000
-    IMAGE_SCN_RESERVED_1 = 0x00000001
-    IMAGE_SCN_RESERVED_2 = 0x00000002
-    IMAGE_SCN_RESERVED_4 = 0x00000004
-    IMAGE_SCN_TYPE_NO_PAD = 0x00000008
-    IMAGE_SCN_RESERVED_10 = 0x00000010
-    IMAGE_SCN_CNT_CODE = 0x00000020
-    IMAGE_SCN_CNT_INITIALIZED_DATA = 0x00000040
-    IMAGE_SCN_CNT_UNINITIALIZED_DATA = 0x00000080
-    IMAGE_SCN_LNK_OTHER = 0x00000100
-    IMAGE_SCN_LNK_INFO = 0x00000200
-    IMAGE_SCN_RESERVED_400 = 0x00000400
-    IMAGE_SCN_LNK_REMOVE = 0x00000800
-    IMAGE_SCN_LNK_COMDAT = 0x00001000
-    IMAGE_SCN_GPREL = 0x00008000
-    IMAGE_SCN_MEM_PURGEABLE = 0x00020000
-    IMAGE_SCN_MEM_16BIT = 0x00020000
-    IMAGE_SCN_MEM_LOCKED = 0x00040000
-    IMAGE_SCN_MEM_PRELOAD = 0x00080000
-    IMAGE_SCN_ALIGN_1BYTES = 0x00100000
-    IMAGE_SCN_ALIGN_2BYTES = 0x00200000
-    IMAGE_SCN_ALIGN_4BYTES = 0x00300000
-    IMAGE_SCN_ALIGN_8BYTES = 0x00400000
-    IMAGE_SCN_ALIGN_16BYTES = 0x00500000
-    IMAGE_SCN_ALIGN_32BYTES = 0x00600000
-    IMAGE_SCN_ALIGN_64BYTES = 0x00700000
-    IMAGE_SCN_ALIGN_128BYTES = 0x00800000
-    IMAGE_SCN_ALIGN_256BYTES = 0x00900000
-    IMAGE_SCN_ALIGN_512BYTES = 0x00A00000
-    IMAGE_SCN_ALIGN_1024BYTES = 0x00B00000
-    IMAGE_SCN_ALIGN_2048BYTES = 0x00C00000
-    IMAGE_SCN_ALIGN_4096BYTES = 0x00D00000
-    IMAGE_SCN_ALIGN_8192BYTES = 0x00E00000
-    IMAGE_SCN_LNK_NRELOC_OVFL = 0x01000000
-    IMAGE_SCN_MEM_DISCARDABLE = 0x02000000
-    IMAGE_SCN_MEM_NOT_CACHED = 0x04000000
-    IMAGE_SCN_MEM_NOT_PAGED = 0x08000000
-    IMAGE_SCN_MEM_SHARED = 0x10000000
-    IMAGE_SCN_MEM_EXECUTE = 0x20000000
-    IMAGE_SCN_MEM_READ = 0x40000000
-    IMAGE_SCN_MEM_WRITE = 0x80000000
-
-
 class COFFHdr(Structure):
     _fields_ = [
         ('signature', ctypes.c_uint32),
@@ -718,6 +590,8 @@ class PE:
         self.imports = defaultdict(list)
         self._address = 0
         self.sym = {}
+        self.load_configuration = None
+        self.bin_name = ''
 
         self._fastpath_string_type = c_ubyte*64
 
@@ -740,6 +614,10 @@ class PE:
         self._parse_resources()
         self._parse_pdata()
         self._parse_imports()
+        self._parse_export_table()
+
+        self.address = self.WindowsCOFFData.imagebase
+        self._parse_load_configuration()
 
     @property
     def address(self):
@@ -752,49 +630,39 @@ class PE:
         self._address = value
 
     def _parse_pe_header(self):
-        # TODO: switch these to casts instead of memmoves
-        self.COFFHdr = self._structs['COFFHdr']()
-        self._populate_field_from_offset(self.COFFHdr,
-                                         self.__next_offset)
+        self.COFFHdr = cast_ctype_from_bytearray(self._structs['COFFHdr'],
+                                                 self.contents,
+                                                 self.__next_offset)
         self.__next_offset += sizeof(self.COFFHdr)
 
         # Start optional headers
 
-        self.StandardCOFFData = self._structs['StandardCOFFData']()
-        self._populate_field_from_offset(self.StandardCOFFData,
-                                         self.__next_offset)
+        self.StandardCOFFData = cast_ctype_from_bytearray(self._structs['StandardCOFFData'],
+                                                          self.contents,
+                                                          self.__next_offset)
         self.__next_offset += sizeof(self.StandardCOFFData)
 
-        self.WindowsCOFFData = self._structs['WindowsCOFFData']()
-        self._populate_field_from_offset(self.WindowsCOFFData,
-                                         self.__next_offset)
+        self.WindowsCOFFData = cast_ctype_from_bytearray(self._structs['WindowsCOFFData'],
+                                                         self.contents,
+                                                         self.__next_offset)
         self.__next_offset += sizeof(self.WindowsCOFFData)
 
-        self.DataDirectories = self._structs['DataDirectories']()
-        self._populate_field_from_offset(self.DataDirectories,
-                                         self.__next_offset)
+        self.DataDirectories = cast_ctype_from_bytearray(self._structs['DataDirectories'],
+                                                         self.contents,
+                                                         self.__next_offset)
+
         self.__next_offset += sizeof(self.DataDirectories)
 
         sect_tbl_typ = self._structs['SectionTable']*self.COFFHdr.num_sections
-        self.SectionTable = sect_tbl_typ()
-        self._populate_field_from_offset(self.SectionTable,
-                                         self.__next_offset)
+        self.SectionTable = cast_ctype_from_bytearray(sect_tbl_typ,
+                                                      self.contents,
+                                                      self.__next_offset)
+
         self.__next_offset += sizeof(self.SectionTable)
 
         # create a section name to section mapping
         self._sections = {bytes(i.name).replace(b'\x00', b'').decode(): i
                           for i in self.SectionTable}
-
-    def _populate_field_from_offset(self, ctype, offset):
-        """
-        Either write into an existing instance of the type,
-        or create a new instance with a cast
-        """
-        if not hasattr(ctype, '__bases__'):
-            # write into an existing instance of the type
-            write_into_ctype(ctype, self.contents[offset:])
-            return ctype
-        return cast_ctype_from_bytearray(ctype, self.contents, offset)
 
     def __get_dos_header_bytes(self):
         return self.contents[2:self.__PE_HDR_PTR_OFF]
@@ -813,8 +681,6 @@ class PE:
         next_offset = offset
 
         write_into_ctype(rsrc_dir_tab, self._rsrc_bytes[next_offset:])
-        # self._populate_field_from_offset(rsrc_dir_tab, next_offset)
-
         self._rsrc_dir_tabs.append(rsrc_dir_tab)
         next_offset += sizeof(rsrc_dir_tab)
 
@@ -825,7 +691,6 @@ class PE:
 
         if sizeof(rsrc_dir_names) != 0:
             write_into_ctype(rsrc_dir_names, self._rsrc_bytes[next_offset:])
-            # self._populate_field_from_offset(rsrc_dir_names, next_offset)
             self._rsrc_dir_names.append(rsrc_dir_names)
             next_offset += sizeof(rsrc_dir_names)
 
@@ -834,7 +699,6 @@ class PE:
         rsrc_dir_ids = rsrc_dir_id_entries_type()
         if sizeof(rsrc_dir_ids) != 0:
             write_into_ctype(rsrc_dir_ids, self._rsrc_bytes[next_offset:])
-            # self._populate_field_from_offset(rsrc_dir_ids, next_offset)
             self._rsrc_dir_ids.append(rsrc_dir_ids)
             for i in rsrc_dir_ids:
                 if i.data_entry_or_subdirectory == 1:
@@ -850,7 +714,7 @@ class PE:
         return next_offset
 
     def _get_rsrc_data(self, rsrc_data_entry):
-        offset = self.virtual_address_to_offset(rsrc_data_entry.data_rva)
+        offset = self.rva_to_offset(rsrc_data_entry.data_rva)
         return self.contents[offset:offset+rsrc_data_entry.size]
 
     def _get_section_bytes(self, section_name):
@@ -861,23 +725,65 @@ class PE:
         bytes_end = bytes_start + header.size_of_raw_data
         return self.contents[bytes_start:bytes_end]
 
-    def _get_section_header_by_virtual_address(self, va):
+    def _get_section_header_by_rva(self, va):
         for i in self.SectionTable:
             if i.virtual_address <= va and va <= i.virtual_address+i.virtual_size:
                 return i
 
-    def _get_section_name_by_virtual_address(self, va):
+    def _get_section_header_by_virtual_address(self, va):
+        if va >= self.address:
+            va -= self.address
+        return self._get_section_header_by_rva(va)
+
+    def _get_section_header_by_offset(self, off):
+        for i in self.SectionTable:
+            if i.pointer_to_raw_data <= off and off <= i.pointer_to_raw_data+i.size_of_raw_data:
+                return i
+
+    def _get_section_name_by_offset(self, offset):
+        s = self._get_section_header_by_offset(offset)
+        if s is None:
+            return ''
+        return bytes(s.name).replace(b'\x00', b'').decode()
+
+    def _get_section_name_by_rva(self, va):
         s = self._get_section_header_by_virtual_address(va)
         if s is None:
             return ''
         return bytes(s.name).replace(b'\x00', b'').decode()
 
-    def virtual_address_to_offset(self, va):
-        section_header = self._get_section_header_by_virtual_address(va)
+    def _get_section_name_by_virtual_address(self, va):
+        if va >= self.address:
+            va -= self.address
+        return self._get_section_name_by_rva(va)
+
+    def rva_to_offset(self, rva):
+        section_header = self._get_section_header_by_virtual_address(rva)
         if section_header is None:
             return 0
-        offset = (va - section_header.virtual_address)
+        offset = (rva - section_header.virtual_address)
         return section_header.pointer_to_raw_data + offset
+
+    def virtual_address_to_offset(self, va):
+        if va >= self.address:
+            va -= self.address
+        return self.rva_to_offset(va)
+
+    def offset_to_rva(self, offset):
+        section_header = self._get_section_header_by_offset(offset)
+        if section_header is None and offset <= self.__next_offset:
+            return offset
+        if section_header is None:
+            # offset was outside the bounds of the established address range
+            return None
+        va = offset - section_header.pointer_to_raw_data
+        return va + section_header.virtual_address
+
+    def offset_to_virtual_address(self, offset):
+        rva = self.offset_to_rva(offset)
+        if rva is None:
+            return None
+        return rva + self.address
 
     def _parse_pdata(self):
         pdata_header = self._sections.get('.pdata')
@@ -887,14 +793,17 @@ class PE:
         function_table_entry_type = self._structs['FunctionTableEntry']
         num_entries = pdata_header.virtual_size // sizeof(function_table_entry_type)
         function_table_type = function_table_entry_type*num_entries
-        function_table = function_table_type()
-        self._populate_field_from_offset(function_table,
-                                         pdata_header.pointer_to_raw_data)
+        # function_table = function_table_type()
+        function_table = cast_ctype_from_bytearray(function_table_type,
+                                                   self.contents,
+                                                   pdata_header.pointer_to_raw_data)
         self._exception_handler_functions = function_table
 
     def _parse_imports(self):
         import_table_info = self.DataDirectories.import_table
-        off = self.virtual_address_to_offset(import_table_info.virtual_address)
+        if import_table_info.virtual_address == 0:
+            return
+        off = self.rva_to_offset(import_table_info.virtual_address)
         size = import_table_info.size
         import_table_bytes = self.contents[off:off+size]
         self._import_table_bytes = import_table_bytes
@@ -909,7 +818,7 @@ class PE:
             if entry.name_rva == 0:
                 continue
             sizet_type = self._structs['size_t']
-            libname = self._string_from_va(entry.name_rva)
+            libname = self._string_from_rva(entry.name_rva)
             import_address_table = self._get_import_lookup_table_at_rva(entry.import_address_table_rva)
             # TODO: might want to copy this as a non-casted type
             self._import_lookup_tables[libname] = import_address_table
@@ -920,7 +829,7 @@ class PE:
                     self.sym[f"imp.{libname}.ord{i}"] = addr
                     continue
                 # TODO: maybe parse hint table correctly
-                sym_name_string = self._string_from_va(sym.ordinal_number_or_hint_table_rva+2)
+                sym_name_string = self._string_from_rva(sym.ordinal_number_or_hint_table_rva+2)
                 self.imports[libname].append(sym_name_string)
                 self.sym[f"imp.{sym_name_string}"] = addr
 
@@ -946,18 +855,65 @@ class PE:
 
         return cstring.decode()
 
-    def _string_from_va(self, va):
-        offset = self.virtual_address_to_offset(va)
+    def _string_from_rva(self, va):
+        offset = self.rva_to_offset(va)
         return self._string_from_offset(offset)
 
     def _get_import_lookup_table_at_rva(self, va):
         import_lookup_tab_typ = self._structs['ImportLookupTable']
-        offset = self.virtual_address_to_offset(va)
+        offset = self.rva_to_offset(va)
         table = get_non_zero_ctype_entries_from_off(import_lookup_tab_typ,
                                                     self.contents,
                                                     offset)
         return table
 
+    def _parse_load_configuration(self):
+        va = self.DataDirectories.load_config_table.virtual_address
+        if va == 0:
+            self.load_config_table = self._structs['LoadConfiguration']()
+            return
+        offset = self.rva_to_offset(va)
+        self.load_config_table = cast_ctype_from_bytearray(self._structs['LoadConfiguration'],
+                                                           self.contents,
+                                                           offset)
+
+    def _parse_export_table(self):
+        va = self.DataDirectories.export_table.virtual_address
+        if va == 0:
+            return
+        export_dir_off = self.rva_to_offset(va)
+
+        export_dir_tab = cast_ctype_from_bytearray(self._structs['ExportDirectoryTable'],
+                                  self.contents, export_dir_off)
+
+        self.bin_name = self._string_from_rva(export_dir_tab.name_rva)
+
+        export_addr_tab_off = self.rva_to_offset(export_dir_tab.export_address_table_rva)
+        addr_table_type = c_uint32*export_dir_tab.address_table_entries
+        export_addr_table_arr = cast_ctype_from_bytearray(addr_table_type,
+                                                          self.contents,
+                                                          export_addr_tab_off)
+        exported_funcs = [i for i in export_addr_table_arr]
+        exported_funcs_len = len(exported_funcs)
+
+        export_names_tab_off = self.rva_to_offset(export_dir_tab.name_ptr_rva)
+        name_table_type = c_uint32*export_dir_tab.number_of_name_ptrs
+        export_name_table_arr = cast_ctype_from_bytearray(name_table_type,
+                                                          self.contents,
+                                                          export_names_tab_off)
+
+        exported_names = [self._string_from_rva(i) for i in export_name_table_arr]
+        exported_names_len = len(exported_names)
+
+        if exported_names_len > exported_funcs_len:
+            exported_funcs.extend([0]*(exported_names_len - exported_funcs_len))
+
+        if exported_names_len < exported_funcs_len:
+            exported_names.extend(['']*(exported_funcs_len - exported_names_len))
+
+        for addr, name in zip(exported_funcs, exported_names):
+            self.sym[name] = addr
+
 
 if __name__ == '__main__':
-    pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "ready_unpacked.exe"))
+    pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "api-ms-win-crt-stdio-l1-1-0.dll"))
