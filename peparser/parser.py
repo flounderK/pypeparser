@@ -7,6 +7,7 @@ import os
 import enum
 import _ctypes
 from collections import defaultdict
+from . import peenums
 
 
 class PEEndian(enum.IntEnum):
@@ -113,6 +114,19 @@ class NiceHexFieldRepr:
         return "\n".join(ret)
 
 
+def gen_enum_flags_repr(enum_flag_class):
+    """
+    Generate a repr function that will display human readable
+    enum flag values
+    """
+    def inner(attr_val):
+        members, uncovered = enum._decompose(enum_flag_class, attr_val)
+        member_repr = '|'.join([i.name for i in members])
+        rep = "%s: %#x" % (member_repr, attr_val)
+        return rep
+    return inner
+
+
 def create_pe_structures(petype=PEHdrType.PE32,
                          endian=PEEndian.LITTLE_ENDIAN,
                          additional_bases=None):
@@ -161,7 +175,12 @@ def create_pe_structures(petype=PEHdrType.PE32,
         'opt_hdr_sz': c_uint16,
         'characteristics': c_uint16
     }.items())
-    structs['COFFHdr'] = type('COFFHdr', base_types, {'_fields_': fields})
+    repr_map = {
+        "characteristics": gen_enum_flags_repr(peenums.ImageFileCharacteristics),
+        "machine": gen_enum_flags_repr(peenums.ImageFileMachineType),
+    }
+    attrs = {'_fields_': fields, '__repr_map__': repr_map}
+    structs['COFFHdr'] = type('COFFHdr', base_types, attrs)
 
     fields = {
         'magic': c_uint16,
@@ -203,9 +222,15 @@ def create_pe_structures(petype=PEHdrType.PE32,
         'loader_flags': c_uint32,
         'number_of_rva_and_sizes': c_uint32,
     }.items())
+    repr_map = {
+        "dll_characteristics": gen_enum_flags_repr(peenums.ImageDllCharacteristics),
+        "subsystem": gen_enum_flags_repr(peenums.ImageSubsystem),
+
+    }
+    attrs = {'_fields_': fields, '__repr_map__': repr_map}
     structs['WindowsCOFFData'] = type('WindowsCOFFData',
                                       base_types,
-                                      {'_fields_': fields})
+                                      attrs)
 
     fields = list({
         'virtual_address': c_uint32,
@@ -253,9 +278,14 @@ def create_pe_structures(petype=PEHdrType.PE32,
         'number_of_line_numbers': c_uint16,
         'characteristics': c_uint32,
     }.items())
+
+    repr_map = {
+        "characteristics": gen_enum_flags_repr(peenums.ImageSectionFlags)
+    }
+    attrs = {'_fields_': fields, "__repr_map__": repr_map}
     structs['SectionTable'] = type('SectionTable',
                                    base_types,
-                                   {'_fields_': fields})
+                                   attrs)
 
     fields = list({
         'name': c_ubyte*8,
@@ -914,6 +944,3 @@ class PE:
         for addr, name in zip(exported_funcs, exported_names):
             self.sym[name] = addr
 
-
-if __name__ == '__main__':
-    pe = PE(os.path.join(os.path.dirname(__file__), "testbins", "api-ms-win-crt-stdio-l1-1-0.dll"))

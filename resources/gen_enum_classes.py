@@ -50,11 +50,14 @@ def gen_enum_class_for_file(filename):
     for a, b in enum_vals:
         print(f"    {a} = {b}")
     print()
+    print()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("files", nargs=argparse.ONE_OR_MORE)
     args = parser.parse_args()
+    print("#!/usr/bin/env python3")
+    print("import enum\n\n")
     for i in args.files:
         gen_enum_class_for_file(i)

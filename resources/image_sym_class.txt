@@ -1,5 +1,5 @@
 IMAGE_SYM_CLASS_END_OF_FUNCTION
--1 (0xFF)
+-1
 A special symbol that represents the end of function, for debugging purposes.
 IMAGE_SYM_CLASS_NULL
 0
