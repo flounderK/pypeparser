@@ -7,6 +7,7 @@ import os
 import enum
 import _ctypes
 from collections import defaultdict
+from datetime import datetime
 from . import peenums
 
 
@@ -114,6 +115,10 @@ class NiceHexFieldRepr:
         return "\n".join(ret)
 
 
+def timestamp_repr(timestamp):
+    return datetime.fromtimestamp(timestamp).isoformat(' ')
+
+
 def gen_enum_flags_repr(enum_flag_class):
     """
     Generate a repr function that will display human readable
@@ -176,8 +181,10 @@ def create_pe_structures(petype=PEHdrType.PE32,
         'characteristics': c_uint16
     }.items())
     repr_map = {
+        "signature": lambda a: bytes(c_uint32(a)),
         "characteristics": gen_enum_flags_repr(peenums.ImageFileCharacteristics),
         "machine": gen_enum_flags_repr(peenums.ImageFileMachineType),
+        "timedatestamp": timestamp_repr,
     }
     attrs = {'_fields_': fields, '__repr_map__': repr_map}
     structs['COFFHdr'] = type('COFFHdr', base_types, attrs)
@@ -264,8 +271,6 @@ def create_pe_structures(petype=PEHdrType.PE32,
                                       base_types,
                                       {'_fields_': fields})
 
-    # TODO: add a __repr_map__ for this to print characteristics
-    # in a readable manner
     fields = list({
         'name': c_ubyte*8,
         'virtual_size': c_uint32,
@@ -278,7 +283,6 @@ def create_pe_structures(petype=PEHdrType.PE32,
         'number_of_line_numbers': c_uint16,
         'characteristics': c_uint32,
     }.items())
-
     repr_map = {
         "characteristics": gen_enum_flags_repr(peenums.ImageSectionFlags)
     }
@@ -376,9 +380,13 @@ def create_pe_structures(petype=PEHdrType.PE32,
         'unload_delay_import_table': c_uint32,
         'time_stamp': c_uint32,
     }.items())
+    repr_map = {
+        "time_stamp": timestamp_repr,
+    }
+    attrs = {'_fields_': fields, '__repr_map__': repr_map}
     structs['DelayLoadDirectoryTable'] = type('DelayLoadDirectoryTable',
                                               base_types,
-                                              {'_fields_': fields})
+                                              attrs)
 
     # TODO: processor dependent
     fields = list({
@@ -426,9 +434,13 @@ def create_pe_structures(petype=PEHdrType.PE32,
         'number_of_name_entries': c_uint16,
         'number_of_id_entries': c_uint16,
     }.items())
+    repr_map = {
+        "time_data_stamp": timestamp_repr,
+    }
+    attrs = {'_fields_': fields, '__repr_map__': repr_map}
     structs['ResourceDirectoryTable'] = type('ResourceDirectoryTable',
                                              base_types,
-                                             {'_fields_': fields})
+                                             attrs)
 
     fields = list({
         'integer_id_or_name_offset': c_uint32,
@@ -475,10 +487,13 @@ def create_pe_structures(petype=PEHdrType.PE32,
     fields.append(('type', c_uint16, 2))
     fields.append(('name_type', c_uint16, 3))
     fields.append(('_reserved', c_uint16, 11))
+    repr_map = {
+        "timestamp": timestamp_repr,
+    }
+    attrs = {'_fields_': fields, '__repr_map__': repr_map, "__packed__": True}
     structs['ImportHeader'] = type('ImportHeader',
                                    base_types,
-                                   {'_fields_': fields,
-                                    '__packed__': True})
+                                   attrs)
 
     fields = list({
         'export_flags': c_uint32,
@@ -493,9 +508,13 @@ def create_pe_structures(petype=PEHdrType.PE32,
         'name_ptr_rva': c_uint32,
         'ordinal_table_rva': c_uint32,
     }.items())
+    repr_map = {
+        "timestamp": timestamp_repr,
+    }
+    attrs = {'_fields_': fields, '__repr_map__': repr_map}
     structs['ExportDirectoryTable'] = type('ExportDirectoryTable',
                                            base_types,
-                                           {'_fields_': fields})
+                                           attrs)
 
     fields = list({
         'export_rva': c_uint32,
@@ -512,9 +531,13 @@ def create_pe_structures(petype=PEHdrType.PE32,
         'name_rva': c_uint32,
         'import_address_table_rva': c_uint32,
     }.items())
+    repr_map = {
+        "timestamp": timestamp_repr,
+    }
+    attrs = {'_fields_': fields, '__repr_map__': repr_map}
     structs['ImportDirectoryTable'] = type('ImportDirectoryTable',
                                            base_types,
-                                           {'_fields_': fields})
+                                           attrs)
 
     # not making this a proper union to avoid big endian
     # union woes
@@ -571,9 +594,13 @@ def create_pe_structures(petype=PEHdrType.PE32,
         'guard_long_jump_target_table': sizet_type,
         'guard_long_jump_target_count': sizet_type,
     }.items())
+    repr_map = {
+        "timestamp": timestamp_repr,
+    }
+    attrs = {'_fields_': fields, '__repr_map__': repr_map}
     structs['LoadConfiguration'] = type('LoadConfiguration',
                                         base_types,
-                                        {'_fields_': fields})
+                                        attrs)
 
     return structs
 
