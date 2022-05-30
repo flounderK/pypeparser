@@ -590,6 +590,7 @@ class PE:
 
         assert self.contents[:2] == self._MZ_SIG
         self.__dos_header_bytes = self.__get_dos_header_bytes()
+        # TODO: fix the unpacking stuff
         # dep on endianness/arch
         self._endian_pack = '<'
         self._uint16_pack = self._endian_pack + ctypes.c_uint16._type_
@@ -620,7 +621,7 @@ class PE:
         self.imports = defaultdict(list)
         self._address = 0
         self.sym = {}
-        self.load_configuration = None
+        self.LoadConfiguration = None
         self.bin_name = ''
 
         self._fastpath_string_type = c_ubyte*64
@@ -900,10 +901,10 @@ class PE:
     def _parse_load_configuration(self):
         va = self.DataDirectories.load_config_table.virtual_address
         if va == 0:
-            self.load_config_table = self._structs['LoadConfiguration']()
+            self.LoadConfiguration = self._structs['LoadConfiguration']()
             return
         offset = self.rva_to_offset(va)
-        self.load_config_table = cast_ctype_from_bytearray(self._structs['LoadConfiguration'],
+        self.LoadConfiguration = cast_ctype_from_bytearray(self._structs['LoadConfiguration'],
                                                            self.contents,
                                                            offset)
 
